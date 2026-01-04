@@ -1,0 +1,2 @@
+alias buyOpeners="buy bruteSSH.exe ; buy FTPcrack.exe ; buy relaySMTP.exe ; buy HTTPworm.exe ; buy SQLinject.exe"
+alias buyall="buy BruteSSH.exe; buy FTPCrack.exe; buy relaySMTP.exe; buy HTTPWorm.exe; buy SQLInject.exe; buy ServerProfiler.exe; buy DeepscanV1.exe; buy DeepscanV2.exe; buy AutoLink.exe; buy Formulas.exe"
