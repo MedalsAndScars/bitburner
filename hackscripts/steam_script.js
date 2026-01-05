@@ -10,11 +10,11 @@ export async function main(ns) {
   var files = ["weak.script", "grow.script", "hack.script"];//No touching, unless you understand everything here
   await ns.write(files[0], "weaken(args)", "w"); await ns.write(files[1], "grow(args)", "w"); await ns.write(files[2], "hack(args)", "w");
 
-  var serverList; var targetList; var hostList; var exes; var temp; var manager = false;
+  var serverList; var firstnode = "home"; var targetList; var hostList; var exes; var temp; var manager = false;
   var cycle = [0, "─", "\\", "|", "/"]; var latest = [["-", "-"], ["-", "-"], ["-", "-"]];
   if (false) { brutessh(); ftpcrack(); relaysmtp(); httpworm(); sqlinject() } //Avoid RAM cost bypass error
 
-  var pServers = await ns.prompt("Use player servers as hosts?");
+  var pServers = await ns.prompt("Use player servers as Host?");
 
   async function scanExes() {
     exes = ["BruteSSH", "FTPCrack", "relaySMTP", "SQLInject", "HTTPWorm"];
@@ -23,8 +23,8 @@ export async function main(ns) {
 
   function arraySort(array) { return array.sort(function (a, b) { return b[0] - a[0] }) }//Sorts nested arrays
   function logBalance(server) {//For balance in display
-    return [ns.nFormat(ns.getServerMoneyAvailable(server), '0a')] + " / " + [ns.nFormat(ns.getServerMaxMoney(server), '0a')]
-      + " : " + ns.nFormat(ns.getServerMoneyAvailable(server) / ns.getServerMaxMoney(server), '0%')
+    return [ns.nFormat(ns.getServerMoneyAvailable(server[1]), '0a')] + " / " + [ns.nFormat(ns.getServerMaxMoney(server[1]), '0a')]
+      + " : " + ns.nFormat(ns.getServerMoneyAvailable(server[1]) / ns.getServerMaxMoney(server[1]), '0%')
   }
 
   async function log() {//The display
@@ -42,7 +42,7 @@ export async function main(ns) {
         ns.print("║ > " + temp + logBalance(temp).padStart(36 - temp.length) + " ║")
       }
       ns.print("╠════════════════════════════════════════╝")
-      ns.print("║ EXE " + exes.length + "/5 ║ HOSTS " + hostList.length + " ║ TARGETS " + targetList.length)
+      ns.print("║ EXE " + exes.length + "/5 ║ serverList " + hostList.length + " ║ TARGETS " + targetList.length)
       ns.print("╠════════════════════════════════════════╗")
       if (manager) {
         ns.print("╠══════╣ Managing " + ns.hacknet.numNodes() + " HNet Nodes ╠".padEnd(21, "═") + "╣")
@@ -50,16 +50,27 @@ export async function main(ns) {
     }
   }
 
-  async function scanServers() {//Finds all servers
-    serverList = ns.scan("home"); let serverCount = [serverList.length, 0]; let depth = 0; let checked = 0; let scanIndex = 0;
-    while (scanIndex <= serverCount[depth] - 1) {
-      let results = ns.scan(serverList[checked]); checked++;
-      for (let i = 0; i <= results.length - 1; i++) {
-        if (results != "home" && !serverList.includes(results)) {
-          serverList.push(results); serverCount[depth + 1]++
+  // async function scanServers() {//Finds all servers
+  //   serverList = ns.scan("home"); let serverCount = [serverList.length, 0]; let depth = 0; let checked = 0; let scanIndex = 0;
+  //   while (scanIndex <= serverCount[depth] - 1) {
+  //     let results = ns.scan(serverList[checked]); checked++;
+  //     for (let i = 0; i <= results.length - 1; i++) {
+  //       if (results != "home" && !serverList.includes(results)) {
+  //         serverList.push(results); serverCount[depth + 1]++
+  //       }
+  //     }
+  //     if (scanIndex == serverCount[depth] - 1) { scanIndex = 0; depth++; serverCount.push(0) } else { scanIndex++ };
+  //   }
+  // }
+  async function scanServers() {
+    serverList = ns.scan(firstnode);
+    for (let i = 0; i <= serverList.length - 1; i++) {
+      let subhost = ns.scan(serverList[i]);
+      for (let j = 0; j <= subhost.length - 1; j++) {
+        if (subhost[j] != firstnode && !serverList.includes(subhost[j])) {
+          serverList.push(subhost[j])
         }
       }
-      if (scanIndex == serverCount[depth] - 1) { scanIndex = 0; depth++; serverCount.push(0) } else { scanIndex++ };
     }
   }
 
@@ -74,19 +85,19 @@ export async function main(ns) {
     }
     for (let i = 0; i <= serverList.length - 1; i++) {
       let cTarget = serverList;
-      if (ns.getServerMoneyAvailable(cTarget) > 0 || ns.getServerMaxRam(cTarget) > 2) {//Filters out servers like darkweb
-        if (ns.getServerNumPortsRequired(cTarget) <= exes.length) {
-          for (let i = 0; i <= exes.length - 1; i++) { ns[exes[i].toLowerCase()](cTarget) }//Runs all EXEs you have
-          ns.nuke(cTarget);//Ghandi.jpeg
-          temp = [Math.floor(ns.getServerMaxMoney(cTarget) / ns.getServerMinSecurityLevel(cTarget)), cTarget];
-          if (ns.getServerMoneyAvailable(cTarget) != 0 && !targetList.includes(temp) && ns.getServerRequiredHackingLevel(cTarget) <= ns.getHackingLevel()) {
+      if (ns.getServerMoneyAvailable(cTarget[i]) > 0 || ns.getServerMaxRam(cTarget[i]) > 2) {//Filters out servers like darkweb
+        if (ns.getServerNumPortsRequired(cTarget[i]) <= exes.length) {
+          for (let i = 0; i <= exes.length - 1; i++) { ns[exes[i].toLowerCase()](cTarget[i]) }//Runs all EXEs you have
+          ns.nuke(cTarget[i]);//Ghandi.jpeg
+          temp = [Math.floor(ns.getServerMaxMoney(cTarget[i]) / ns.getServerMinSecurityLevel(cTarget[i])), cTarget[i]];
+          if (ns.getServerMoneyAvailable(cTarget[i]) != 0 && !targetList.includes(temp) && ns.getServerRequiredHackingLevel(cTarget[i]) <= ns.getHackingLevel()) {
             targetList.push(temp); targetList = arraySort(targetList);
           }
-          temp = [ns.getServerMaxRam(cTarget), cTarget];
-          if (ns.getServerMaxRam(cTarget) > 2 && !hostList.includes(cTarget)) {
+          temp = [ns.getServerMaxRam(cTarget[i]), cTarget[i]];
+          if (ns.getServerMaxRam(cTarget[i]) > 2 && !hostList.includes(cTarget[i])) {
             hostList.push(temp); hostList = arraySort(hostList)
           }
-          await ns.scp(files, "home", cTarget);
+          await ns.scp(files, "home", cTarget[i]);
         }
       }
     }
@@ -99,23 +110,23 @@ export async function main(ns) {
       if (tarIndex > targetList.length - 1) { tarIndex = 0; loop = true };
       let hHost = hostList[1]; let hTarget = targetList[tarIndex][1]; let freeRam;
       if (hHost == "home") { freeRam = Math.max(ns.getServerMaxRam(hHost) - ns.getServerUsedRam(hHost) - 50, 0) } else {
-        freeRam = ns.getServerMaxRam(hHost) - ns.getServerUsedRam(hHost)
+        freeRam = ns.getServerMaxRam(hHost[1]) - ns.getServerUsedRam(hHost[1])
       }
       if (freeRam >= 4) {
         let threads = Math.floor(freeRam / 1.75); let bThreads = 0;
         if (ns.getServerMoneyAvailable(hTarget) < ns.getServerMaxMoney(hTarget) * .70 || loop) {//Server money target here
           latest[0][0] = hHost; latest[0][1] = hTarget;
           if (threads > 2) {
-            ns.exec("weak.script", hHost, Math.ceil(0.08 * threads), hTarget);
-            ns.exec("grow.script", hHost, Math.floor(0.92 * threads), hTarget);
+            ns.exec("weak.script", hHost[1], Math.ceil(0.08 * threads), hTarget);
+            ns.exec("grow.script", hHost[1], Math.floor(0.92 * threads), hTarget);
           } else { ns.exec("grow.script", hHost, threads, hTarget) }
         } else if (ns.getServerSecurityLevel(hTarget) > ns.getServerMinSecurityLevel(hTarget) + 5) {//Security target here
           latest[1][0] = hHost; latest[1][1] = hTarget;
-          ns.exec("weak.script", hHost, threads, hTarget);
+          ns.exec("weak.script", hHost[1], threads, hTarget);
         } else {
           while (parseFloat(ns.hackAnalyze(hTarget)) * threads > .4) { threads--; bThreads++ }//Hack limit here
           latest[2][0] = hHost; latest[2][1] = hTarget;
-          ns.exec("hack.script", hHost, threads, hTarget);
+          ns.exec("hack.script", hHost[1], threads, hTarget);
           if (bThreads > 0) { ns.exec("weak.script", hHost, bThreads, hTarget) }
         }
       }
@@ -138,6 +149,7 @@ export async function main(ns) {
       }
     }
   }
+  ns.ui.openTail()
   //But above here
   while (true) {//Keeps everything running once per second
     await scanExes()
